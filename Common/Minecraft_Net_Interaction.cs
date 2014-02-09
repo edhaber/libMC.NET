@@ -8,7 +8,7 @@ using System.Web;
 using System.IO;
 using Newtonsoft.Json.Linq;
 
-namespace libMC.NET
+namespace libMC.NET.Common
 {
     public class Minecraft_Net_Interaction
     {

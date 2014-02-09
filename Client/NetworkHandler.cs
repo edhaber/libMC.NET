@@ -10,24 +10,24 @@ using libMC.NET.Packets.Handshake;
 using libMC.NET.Packets.Login;
 using libMC.NET.MinecraftWorld;
 
-namespace libMC.NET {
+namespace libMC.NET.Client {
     public class NetworkHandler {
         #region Variables
         Thread handler;
-        Minecraft mainMC;
+        MinecraftClient mainMC;
         TcpClient baseSock;
         NetworkStream baseStream;
         public Wrapped wSock;
         public TickHandler worldTick;
 
         #region Packet Dictionaries
-        Dictionary<int, Func<Minecraft, Packets.Packet>> packetsLogin;
-        Dictionary<int, Func<Minecraft, Packets.Packet>> packetsPlay;
-        Dictionary<int, Func<Minecraft, Packets.Packet>> packetsStatus;
+        Dictionary<int, Func<MinecraftClient, Packets.Packet>> packetsLogin;
+        Dictionary<int, Func<MinecraftClient, Packets.Packet>> packetsPlay;
+        Dictionary<int, Func<MinecraftClient, Packets.Packet>> packetsStatus;
         #endregion
         #endregion
 
-        public NetworkHandler(Minecraft mc) {
+        public NetworkHandler(MinecraftClient mc) {
             mainMC = mc;
             PopulateLists();
         } 
@@ -38,8 +38,8 @@ namespace libMC.NET {
         public void Start() {
             try {
                 baseSock = new TcpClient();
-                IAsyncResult AR = baseSock.BeginConnect(mainMC.ServerIP, mainMC.ServerPort, null, null);
-                WaitHandle wh = AR.AsyncWaitHandle;
+                var AR = baseSock.BeginConnect(mainMC.ServerIP, mainMC.ServerPort, null, null);
+                var wh = AR.AsyncWaitHandle;
 
                 try {
                     if (!AR.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(5), false)) {
@@ -72,10 +72,10 @@ namespace libMC.NET {
             // -- Send a handshake packet
 
             if (mainMC.ServerState != 1) {
-                Handshake hs = new Handshake(ref mainMC);
+                var hs = new Handshake(ref mainMC);
                 RaiseSocketDebug(this, "Handshake sent.");
             } else {
-                Handshake hs = new Handshake(ref mainMC);
+                var hs = new Handshake(ref mainMC);
                 RaiseSocketDebug(this, "Handshake sent, Pinging server!");
             }
 
@@ -96,7 +96,7 @@ namespace libMC.NET {
             baseStream = null;
 
             baseSock.Close();
-            InfoMessage(this, "Disconnected from Minecraft Server.");
+            InfoMessage(this, "Disconnected from MinecraftClient Server.");
 
 
         }
@@ -106,19 +106,19 @@ namespace libMC.NET {
         /// </summary>
         /// 
         void PopulateLists() {
-            packetsLogin = new Dictionary<int,Func<Minecraft,Packets.Packet>> {
+            packetsLogin = new Dictionary<int,Func<MinecraftClient,Packets.Packet>> {
                 {0, (mainMC) => new Disconnect(ref mainMC) },
                 {1, (mainMC) => new EncryptionRequest(ref mainMC) },
                 {2, (mainMC) => new LoginSuccess(ref mainMC) }
             };
 
-            packetsStatus = new Dictionary<int, Func<Minecraft, Packets.Packet>> {
+            packetsStatus = new Dictionary<int, Func<MinecraftClient, Packets.Packet>> {
                 {0, (mainMC) => new Packets.Status.Response(ref mainMC) },
                 {1, (mainMC) => new Packets.Status.ServerPing(ref mainMC) }
             };
 
             //-------------------
-            packetsPlay = new Dictionary<int, Func<Minecraft, Packets.Packet>> {
+            packetsPlay = new Dictionary<int, Func<MinecraftClient, Packets.Packet>> {
                 {0, (mainMC) => new Packets.Play.KeepAlive(ref mainMC) },
                 {1, (mainMC) => new Packets.Play.JoinGame(ref mainMC) },
                 {2, (mainMC) => new Packets.Play.ChatMessage(ref mainMC) },
@@ -197,7 +197,7 @@ namespace libMC.NET {
 
                 while ((length = wSock.readVarInt()) != 0) {
                     if (baseSock.Connected) {
-                        int packetID = wSock.readVarInt();
+                        var packetID = wSock.readVarInt();
 
                         switch (mainMC.ServerState) {
                             case (int)ServerState.Status:
@@ -255,6 +255,7 @@ namespace libMC.NET {
             Login,
             Play
         }
+
         #region Event Messengers
         public void RaiseSocketError(object sender, string message) {
             if (SocketError != null)

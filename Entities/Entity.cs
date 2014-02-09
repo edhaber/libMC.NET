@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using libMC.NET.Common;
+using CWrapped;
 
 namespace libMC.NET.Entities {
     /// <summary>
@@ -28,11 +29,11 @@ namespace libMC.NET.Entities {
             Inventory = new Dictionary<int, Item>();
         }
 
-        public void ReadEntityMetadata(ref Minecraft mc) {
+        public void ReadEntityMetadata(ref Wrapped wSock) {
 
             do {
 
-                byte item = mc.nh.wSock.readByte();
+                byte item = wSock.readByte();
 
                 if (item == 127) break;
 
@@ -41,32 +42,32 @@ namespace libMC.NET.Entities {
 
                 switch (type) {
                     case 0:
-                        HandleMetadata(index, mc.nh.wSock.readByte());
+                        HandleMetadata(index, wSock.readByte());
                         break;
                     case 1:
-                        HandleMetadata(index, mc.nh.wSock.readShort());
+                        HandleMetadata(index, wSock.readShort());
                         break;
                     case 2:
-                        HandleMetadata(index, mc.nh.wSock.readInt());
+                        HandleMetadata(index, wSock.readInt());
                         break;
                     case 3:
-                        HandleMetadata(index, mc.nh.wSock.readFloat());
+                        HandleMetadata(index, wSock.readFloat());
                         break;
                     case 4:
-                        HandleMetadata(index, mc.nh.wSock.readString());
+                        HandleMetadata(index, wSock.readString());
                         break;
                     case 5:
                         Item temp = new Item();
-                        temp.ReadSlot(ref mc);
+                        temp.ReadSlot(ref wSock);
 
                         HandleMetadata(index, temp);
                         break;
                     case 6:
                         Vector v = new Vector();
 
-                        v.x = mc.nh.wSock.readInt();
-                        v.y = mc.nh.wSock.readInt();
-                        v.z = mc.nh.wSock.readInt();
+                        v.x = wSock.readInt();
+                        v.y = wSock.readInt();
+                        v.z = wSock.readInt();
 
                         HandleMetadata(index, v);
                         break;

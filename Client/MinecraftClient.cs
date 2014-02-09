@@ -9,15 +9,16 @@ using libMC.NET.Common;
 using libMC.NET.World;
 using libMC.NET.Entities;
 
-// TODO: Comment more things
-// TODO: Speed things up, optimize code.
+// TODO: [Low] Comment more things
+// TODO: [Medium] Speed things up, optimize code.
 
-// [Low]: Refactor packets to be universal for Server/Client, and be usable with proxies
-namespace libMC.NET {
+// [Current]: Refactor packets to be universal for Server/Client, and be usable with proxies.
+// [Current]: Refactor code to be modular and not dependant on any speicfic server or client code.
+namespace libMC.NET.Client {
     /// <summary>
-    /// Main class for libMC.Net, a Minecraft interaction library for .net languages.
+    /// Main class for libMC.Net.Client, the Client portion of a MinecraftClient interaction library for .NET.
     /// </summary>
-    public class Minecraft {
+    public class MinecraftClient {
         #region Variables
         public string ServerIP, ClientName, ClientPassword, AccessToken, ClientToken, SelectedProfile, ClientBrand;
         public int ServerPort, ServerState;
@@ -32,14 +33,14 @@ namespace libMC.NET {
         #endregion
 
         /// <summary>
-        /// Create a new Minecraft Instance
+        /// Create a new MinecraftClient Client Instance
         /// </summary>
         /// <param name="ip">The IP of the server to connect to</param>
         /// <param name="port">The port of the server to connect to</param>
-        /// <param name="username">The username to use when connecting to Minecraft</param>
-        /// <param name="password">The password to use when connecting to Minecraft (Ignore if you are providing credentials)</param>
+        /// <param name="username">The username to use when connecting to MinecraftClient</param>
+        /// <param name="password">The password to use when connecting to MinecraftClient (Ignore if you are providing credentials)</param>
         /// <param name="nameVerification">To connect using Name Verification or not</param>
-        public Minecraft(string ip, int port, string username, string password, bool nameVerification) {
+        public MinecraftClient(string ip, int port, string username, string password, bool nameVerification) {
             ServerIP = ip;
             ServerPort = port;
             ClientName = username;
@@ -49,7 +50,7 @@ namespace libMC.NET {
         }
 
         /// <summary>
-        /// Login to Minecraft.net and store credentials
+        /// Login to MinecraftClient.net and store credentials
         /// </summary>
         public void Login() {
             if (VerifyNames) {
@@ -57,11 +58,11 @@ namespace libMC.NET {
                 string[] credentials = loginHandler.Login(ClientName, ClientPassword);
 
                 if (credentials[0] == "") {  // -- Fall back to no auth.
-                    RaiseError(this, "Failed to login to Minecraft.net! (Incorrect username or password)");
+                    RaiseError(this, "Failed to login to MinecraftClient.net! (Incorrect username or password)");
 
                     VerifyNames = false;
                 } else {
-                    RaiseInfo(this, "Logged in to Minecraft.net successfully.");
+                    RaiseInfo(this, "Logged in to MinecraftClient.net successfully.");
 
                     RaiseDebug(this, string.Format("Token: {0}\nProfile: {1}", credentials[0], credentials[1]));
 
@@ -77,7 +78,7 @@ namespace libMC.NET {
         
         }
         /// <summary>
-        /// Uses a client's stored credentials to verify with Minecraft.net
+        /// Uses a client's stored credentials to verify with MinecraftClient.net
         /// </summary>
         public bool VerifySession() {
             if (AccessToken == null || ClientToken == null) {
@@ -101,7 +102,7 @@ namespace libMC.NET {
             return true;
         }
         /// <summary>
-        /// Uses a client's stored credentials to verify with Minecraft.net
+        /// Uses a client's stored credentials to verify with MinecraftClient.net
         /// </summary>
         /// <param name="accessToken">Stored Access Token</param>
         /// <param name="clientToken">Stored Client Token</param>
@@ -125,7 +126,7 @@ namespace libMC.NET {
             return true;
         }
         /// <summary>
-        /// Connects to the Minecraft Server.
+        /// Connects to the MinecraftClient Server.
         /// </summary>
         public void Connect() {
             if (nh != null)
@@ -149,7 +150,7 @@ namespace libMC.NET {
         }
 
         /// <summary>
-        /// Disconnects from the Minecraft server.
+        /// Disconnects from the MinecraftClient server.
         /// </summary>
         public void Disconnect() {
             if (nh != null)
