@@ -51,6 +51,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Client\PacketEventHandler.cs" />
     <Compile Include="Common\DoubleVector.cs" />
     <Compile Include="Entities\Block.cs" />
     <Compile Include="Network\IPacket.cs" />
@@ -73,9 +74,7 @@
     <Compile Include="Proxy.cs" />
     <Compile Include="World\TickHandler.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Client\Handlers\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

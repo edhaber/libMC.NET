@@ -13,7 +13,7 @@ namespace libMC.NET.Client {
     public class NetworkHandler {
         #region Variables
         Thread handler;
-        MinecraftClient mainMC;
+        MinecraftClient MainMC;
         TcpClient baseSock;
         NetworkStream baseStream;
         public Wrapped wSock;
@@ -23,24 +23,34 @@ namespace libMC.NET.Client {
         Dictionary<int, Func<IPacket>> packetsLogin;
         Dictionary<int, Func<IPacket>> packetsPlay;
         Dictionary<int, Func<IPacket>> packetsStatus;
+
+        // -- Packet Handler Delegate...
+        public delegate void PacketHandler(MinecraftClient client, IPacket packet);
+
+        // -- Array containing packet handlers.
+        public PacketHandler[] LoginHandlers;
+        public PacketHandler[] PlayHandlers;
+        public PacketHandler[] StatusHandlers;
         #endregion
         #endregion
 
         public NetworkHandler(MinecraftClient mc) {
-            mainMC = mc;
+            MainMC = mc;
+            LoginHandlers = new PacketHandler[3];
+            PlayHandlers = new PacketHandler[65];
+            StatusHandlers = new PacketHandler[2];
             PopulateLists();
         } 
         
         /// <summary>
-        /// Starts the network handler.
+        /// Starts the network handler. (Connects to a minecraft server)
         /// </summary>
         public void Start() {
             try {
                 baseSock = new TcpClient();
-                var AR = baseSock.BeginConnect(mainMC.ServerIP, mainMC.ServerPort, null, null);
-                var wh = AR.AsyncWaitHandle;
+                var AR = baseSock.BeginConnect(MainMC.ServerIP, MainMC.ServerPort, null, null);
 
-                try {
+                using (var wh = AR.AsyncWaitHandle) {
                     if (!AR.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(5), false)) {
                         baseSock.Close();
                         RaiseSocketError(this, "Failed to connect: Connection Timeout");
@@ -48,8 +58,6 @@ namespace libMC.NET.Client {
                     }
 
                     baseSock.EndConnect(AR);
-                } finally {
-                    wh.Close();
                 }
 
             } catch (Exception e) {
@@ -57,45 +65,26 @@ namespace libMC.NET.Client {
                 return;
             }
             
-            mainMC.Running = true;
+            MainMC.Running = true;
 
             RaiseSocketInfo(this, "Connected to server.");
-            RaiseSocketDebug(this, string.Format("IP: {0} Port: {1}", mainMC.ServerIP, mainMC.ServerPort.ToString()));
+            RaiseSocketDebug(this, string.Format("IP: {0} Port: {1}", MainMC.ServerIP, MainMC.ServerPort.ToString()));
 
             // -- Create our Wrapped socket.
             baseStream = baseSock.GetStream();
             wSock = new Wrapped(baseStream);
-
             RaiseSocketDebug(this, "Socket Created");
 
-            // -- Send a handshake packet
-            
-            var hs = new SBHandshake();
-            hs.ProtocolVersion = 4;
-            hs.ServerAddress = mainMC.ServerIP;
-            hs.ServerPort = (short)mainMC.ServerPort;
-            hs.NextState = 2;
-
-            if (mainMC.ServerState == 1)
-                hs.NextState = 1;
-
-            hs.Write(wSock);
-
-            if (mainMC.ServerState == 1) {
-                var PingRequest = new SBRequest();
-                PingRequest.Write(wSock);
-            }
-
-            RaiseSocketDebug(this, "Handshake sent.");
+            DoHandshake();
 
             // -- Start network parsing.
-            handler = new Thread(PacketHandler);
+            handler = new Thread(NetworkHandler);
             handler.Start();
             RaiseSocketDebug(this, "Handler thread started");
         }
        
         /// <summary>
-        /// Stops the network handler.
+        /// Stops the network handler. (Disconnects from a minecraft server)
         /// </summary>
         public void Stop() {
             DebugMessage(this, "Stopping network handler...");
@@ -109,11 +98,60 @@ namespace libMC.NET.Client {
 
 
         }
-        
+
+        /// <summary>
+        /// Sends a server handshake, and a ping request packet if NextState is set to 1.
+        /// </summary>
+        public void DoHandshake() {
+            var hs = new SBHandshake();
+            hs.ProtocolVersion = 4;
+            hs.ServerAddress = MainMC.ServerIP;
+            hs.ServerPort = (short)MainMC.ServerPort;
+            hs.NextState = 2;
+
+            if (MainMC.ServerState == 1)
+                hs.NextState = 1;
+
+            hs.Write(wSock);
+
+            if (MainMC.ServerState == 1) {
+                var PingRequest = new SBRequest();
+                PingRequest.Write(wSock);
+            }
+
+            RaiseSocketDebug(this, "Handshake sent.");
+        }
+
+        /// <summary>
+        /// Registers a method to be the handler of a given packet.
+        /// </summary>
+        /// <param name="packetID"></param>
+        /// <param name="method"></param>
+        public void RegisterLoginHandler(int packetID, PacketHandler method) {
+            LoginHandlers[packetID] = method;
+        }
+
+        /// <summary>
+        /// Registers a method to be the handler of a given packet.
+        /// </summary>
+        /// <param name="packetID"></param>
+        /// <param name="method"></param>
+        public void RegisterPlayHandler(int packetID, PacketHandler method) {
+            PlayHandlers[packetID] = method;
+        }
+
+        /// <summary>
+        /// Registers a method to be the handler of a given packet.
+        /// </summary>
+        /// <param name="packetID"></param>
+        /// <param name="method"></param>
+        public void RegisterStatusHandler(int packetID, PacketHandler method) {
+            StatusHandlers[packetID] = method;
+        }
+
         /// <summary>
         /// Populates the packet lists with reconized types.
         /// </summary>
-        /// 
         void PopulateLists() {
             packetsLogin = new Dictionary<int,Func<IPacket>> {
                 {0, () => new CBLoginDisconnect() },
@@ -197,10 +235,11 @@ namespace libMC.NET.Client {
 
             RaiseSocketDebug(this, "List populated");
         }
+        
         /// <summary>
         /// Creates an instance of each new packet, so it can be parsed.
         /// </summary>
-        void PacketHandler() {
+        void NetworkHandler() {
             try {
                 int length = 0;
 
@@ -208,7 +247,7 @@ namespace libMC.NET.Client {
                     if (baseSock.Connected) {
                         var packetID = wSock.readVarInt();
 
-                        switch (mainMC.ServerState) {
+                        switch (MainMC.ServerState) {
                             case (int)ServerState.Status:
                                 if (packetsStatus.Keys.Contains(packetID) == false) {
                                     RaiseSocketError(this, "Unknown Packet ID. State: 1, Packet: " + packetID);
