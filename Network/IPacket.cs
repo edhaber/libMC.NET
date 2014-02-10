@@ -10,7 +10,7 @@ namespace libMC.NET.Network {
         void Read(Wrapped wSock);
         void Write(Wrapped wSock);
     }
-	
+
     // -- Status 0: Handshake
     public struct SBServerbound : IPacket {
         public int ProtocolVersion { get; set; }
@@ -1445,14 +1445,16 @@ namespace libMC.NET.Network {
         public int ChunkZ { get; set; }
         public short Recordcount { get; set; }
         public int Datasize { get; set; }
-        public array of records Records { get; set; }
+        public Record[] Records { get; set; }
 
         public void Read(Wrapped wSock) {
             ChunkX = wSock.readInt();
             ChunkZ = wSock.readInt();
             Recordcount = wSock.readShort();
             Datasize = wSock.readInt();
-            Records = wSock.readArray of Records();
+
+            for (int x = 0; x < Recordcount; x++)
+                Records[x] = WrappedExtension.ReadRecord(wSock);
         }
 
         public void Write(Wrapped wSock) {
@@ -1461,7 +1463,10 @@ namespace libMC.NET.Network {
             wSock.writeInt(ChunkZ);
             wSock.writeShort(Recordcount);
             wSock.writeInt(Datasize);
-            wSock.writeArray of Records(Records);
+
+            for (int x = 0; x < Recordcount; x++)
+                WrappedExtension.WriteRecord(wSock, Records[x]);
+
             wSock.Purge();
         }
     }
@@ -1543,14 +1548,14 @@ namespace libMC.NET.Network {
         public int Datalength { get; set; }
         public bool Skylightsent { get; set; }
         public byte[] Data { get; set; }
-        public meta Metainformation { get; set; }
+        public byte[] Metainformation { get; set; }
 
         public void Read(Wrapped wSock) {
             Chunkcolumncount = wSock.readShort();
             Datalength = wSock.readInt();
             Skylightsent = wSock.readBool();
-            Data = wSock.readSByte Array();
-            Metainformation = wSock.readMeta();
+            Data = wSock.readByteArray(Datalength);
+            Metainformation = wSock.readByteArray(Chunkcolumncount * 12);
         }
 
         public void Write(Wrapped wSock) {
@@ -1558,8 +1563,8 @@ namespace libMC.NET.Network {
             wSock.writeShort(Chunkcolumncount);
             wSock.writeInt(Datalength);
             wSock.writeBool(Skylightsent);
-            wSock.writeSByte Array(Data);
-            wSock.writeMeta(Metainformation);
+            wSock.Send(Data);
+            wSock.Send(Metainformation);
             wSock.Purge();
         }
     }
@@ -1570,7 +1575,7 @@ namespace libMC.NET.Network {
         public float Z { get; set; }
         public float Radius { get; set; }
         public int Recordcount { get; set; }
-        public (sbyte, sbyte, sbyte) × count Records { get; set; }
+        public sbyte[] Records { get; set; }
         public float PlayerMotionX { get; set; }
         public float PlayerMotionY { get; set; }
         public float PlayerMotionZ { get; set; }
@@ -1581,7 +1586,12 @@ namespace libMC.NET.Network {
             Z = wSock.readFloat();
             Radius = wSock.readFloat();
             Recordcount = wSock.readInt();
-            Records = wSock.read(SByte, SByte, SByte) × count();
+            Records = new sbyte[Recordcount * 3];
+
+            for (int x = 0; x < Records.Length - 1; x++) {
+                Records[x] = wSock.readSByte();
+            }
+
             PlayerMotionX = wSock.readFloat();
             PlayerMotionY = wSock.readFloat();
             PlayerMotionZ = wSock.readFloat();
@@ -1594,7 +1604,11 @@ namespace libMC.NET.Network {
             wSock.writeFloat(Z);
             wSock.writeFloat(Radius);
             wSock.writeInt(Recordcount);
-            wSock.write(SByte, SByte, SByte) × count(Records);
+
+            for (int x = 0; x < Records.Length - 1; x++) {
+                wSock.writeSByte(Records[x]);
+            }
+
             wSock.writeFloat(PlayerMotionX);
             wSock.writeFloat(PlayerMotionY);
             wSock.writeFloat(PlayerMotionZ);
@@ -1627,17 +1641,6 @@ namespace libMC.NET.Network {
             wSock.writeInt(Z);
             wSock.writeInt(Data);
             wSock.writeBool(Disablerelativevolume);
-            wSock.Purge();
-        }
-    }
-
-    public struct CBEffects : IPacket {
-
-        public void Read(Wrapped wSock) {
-        }
-
-        public void Write(Wrapped wSock) {
-            wSock.writeVarInt(<b>Sound</b>);
             wSock.Purge();
         }
     }
@@ -1780,19 +1783,24 @@ namespace libMC.NET.Network {
     public struct CBWindowItems : IPacket {
         public byte WindowID { get; set; }
         public short Count { get; set; }
-        public array of <a href="/slot_data" title="slot data">slots</a> Slotdata { get; set; }
+        public SlotData[] Slotdata { get; set; }
 
         public void Read(Wrapped wSock) {
             WindowID = wSock.readByte();
             Count = wSock.readShort();
-            Slotdata = wSock.readArray of <a href="/Slot_Data" title="Slot Data">Slots</a>();
+
+            for (int x = 0; x < Count - 1; x++)
+                Slotdata[x] = WrappedExtension.ReadSlot(wSock);
         }
 
         public void Write(Wrapped wSock) {
             wSock.writeVarInt(0x30);
             wSock.writeByte(WindowID);
             wSock.writeShort(Count);
-            wSock.writeArray of <a href="/Slot_Data" title="Slot Data">Slots</a>(Slotdata);
+
+            for (int x = 0; x < Count - 1; x++)
+                WrappedExtension.WriteSlot(wSock, Slotdata[x]);
+
             wSock.Purge();
         }
     }
@@ -1877,14 +1885,14 @@ namespace libMC.NET.Network {
         public void Read(Wrapped wSock) {
             ItemDamage = wSock.readVarInt();
             Length = wSock.readShort();
-            Data = wSock.readSByte Array();
+            Data = wSock.readByteArray(Length);
         }
 
         public void Write(Wrapped wSock) {
             wSock.writeVarInt(0x34);
             wSock.writeVarInt(ItemDamage);
             wSock.writeShort(Length);
-            wSock.writeSByte Array(Data);
+            wSock.Send(Data);
             wSock.Purge();
         }
     }
@@ -1903,7 +1911,7 @@ namespace libMC.NET.Network {
             Z = wSock.readInt();
             Action = wSock.readByte();
             Datalength = wSock.readShort();
-            NBTData = wSock.readSByte Array();
+            NBTData = wSock.readByteArray(Datalength);
         }
 
         public void Write(Wrapped wSock) {
@@ -1913,7 +1921,7 @@ namespace libMC.NET.Network {
             wSock.writeInt(Z);
             wSock.writeByte(Action);
             wSock.writeShort(Datalength);
-            wSock.writeSByte Array(NBTData);
+            wSock.Send(NBTData);
             wSock.Purge();
         }
     }
@@ -1981,7 +1989,7 @@ namespace libMC.NET.Network {
         }
     }
 
-    public struct CBTab-Complete : IPacket {
+    public struct CBTabComplete : IPacket {
         public int Count { get; set; }
         public string Match { get; set; }
 
@@ -2001,32 +2009,32 @@ namespace libMC.NET.Network {
     public struct CBScoreboardObjective : IPacket {
         public string Objectivename { get; set; }
         public string Objectivevalue { get; set; }
-        public sbyte Create/Remove { get; set; }
+        public sbyte Create { get; set; }
 
         public void Read(Wrapped wSock) {
             Objectivename = wSock.readString();
             Objectivevalue = wSock.readString();
-            Create/Remove = wSock.readSByte();
+            Create = wSock.readSByte();
         }
 
         public void Write(Wrapped wSock) {
             wSock.writeVarInt(0x3B);
             wSock.writeString(Objectivename);
             wSock.writeString(Objectivevalue);
-            wSock.writeSByte(Create/Remove);
+            wSock.writeSByte(Create);
             wSock.Purge();
         }
     }
 
     public struct CBUpdateScore : IPacket {
         public string ItemName { get; set; }
-        public sbyte Update/Remove { get; set; }
+        public sbyte Update { get; set; }
         public string ScoreName { get; set; }
         public int Value { get; set; }
 
         public void Read(Wrapped wSock) {
             ItemName = wSock.readString();
-            Update/Remove = wSock.readSByte();
+            Update = wSock.readSByte();
             ScoreName = wSock.readString();
             Value = wSock.readInt();
         }
@@ -2034,7 +2042,7 @@ namespace libMC.NET.Network {
         public void Write(Wrapped wSock) {
             wSock.writeVarInt(0x3C);
             wSock.writeString(ItemName);
-            wSock.writeSByte(Update/Remove);
+            wSock.writeSByte(Update);
             wSock.writeString(ScoreName);
             wSock.writeInt(Value);
             wSock.Purge();
@@ -2066,7 +2074,7 @@ namespace libMC.NET.Network {
         public string TeamSuffix { get; set; }
         public sbyte Friendlyfire { get; set; }
         public short Playercount { get; set; }
-        public array of strings Players { get; set; }
+        public string[] Players { get; set; }
 
         public void Read(Wrapped wSock) {
             TeamName = wSock.readString();
@@ -2076,7 +2084,9 @@ namespace libMC.NET.Network {
             TeamSuffix = wSock.readString();
             Friendlyfire = wSock.readSByte();
             Playercount = wSock.readShort();
-            Players = wSock.readArray of strings();
+
+            for (int x = 0; x < Playercount - 1; x++)
+                Players[x] = wSock.readString();
         }
 
         public void Write(Wrapped wSock) {
@@ -2088,7 +2098,10 @@ namespace libMC.NET.Network {
             wSock.writeString(TeamSuffix);
             wSock.writeSByte(Friendlyfire);
             wSock.writeShort(Playercount);
-            wSock.writeArray of strings(Players);
+
+            for (int x = 0; x < Playercount - 1; x++)
+                wSock.writeString(Players[x]);
+
             wSock.Purge();
         }
     }
@@ -2101,14 +2114,14 @@ namespace libMC.NET.Network {
         public void Read(Wrapped wSock) {
             Channel = wSock.readString();
             Length = wSock.readShort();
-            Data = wSock.readSByte Array();
+            Data = wSock.readByteArray(Length);
         }
 
         public void Write(Wrapped wSock) {
             wSock.writeVarInt(0x3F);
             wSock.writeString(Channel);
             wSock.writeShort(Length);
-            wSock.writeSByte Array(Data);
+            wSock.Send(Data);
             wSock.Purge();
         }
     }
@@ -2126,4 +2139,4 @@ namespace libMC.NET.Network {
             wSock.Purge();
         }
     }
-
+}

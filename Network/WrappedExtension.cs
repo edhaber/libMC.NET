@@ -34,12 +34,11 @@ namespace libMC.NET.Network {
     }
 
     public struct Record {
-        byte[] BlockData;
-        int X;
-        int Y;
-        int Z;
-        int BlockID;
-        int Metadata;
+        public byte X { get; set; }
+        public byte Y { get; set; }
+        public byte Z { get; set; }
+        public short BlockID { get; set; }
+        public byte Metadata { get; set; }
     }
 
     /// <summary>
@@ -152,22 +151,7 @@ namespace libMC.NET.Network {
             wSock.writeDouble(Data.Amount);
             wSock.writeByte(Data.Operation);
         }
-
-        //public static decimal ReadDecimal(Wrapped wSock) {
-        //    var Bytes = wSock.readByteArray(16);
-
-        //    var i1 = BitConverter.ToInt32(Bytes, 0);
-        //    var i2 = BitConverter.ToInt32(Bytes, 4);
-        //    var i3 = BitConverter.ToInt32(Bytes, 8);
-        //    var i4 = BitConverter.ToInt32(Bytes, 12);
-
-        //    return new decimal(new int[] { i1, i2, i3, i4 });
-        //}
-
-        //public static void WriteDecimal(Wrapped wSock) {
-            
-        //}
-
+        
         public static SlotData ReadSlot(Wrapped wSock) {
             var Data = new SlotData();
             Data.ID = wSock.readShort();
@@ -207,6 +191,24 @@ namespace libMC.NET.Network {
 
             wSock.writeShort((short)Data.NbtData.Length);
             wSock.Send(Data.NbtData);
+        }
+
+        public static Record ReadRecord(Wrapped wSock) {
+            var Data = new Record();
+            var RecordData = wSock.readInt();
+
+            Data.Metadata = (byte)(RecordData & 0xF);
+            Data.BlockID = (short)((RecordData >> 4) & 0xFFF);
+            Data.Y = (byte)((RecordData >> 16) & 0xFF);
+            Data.Z = (byte)((RecordData >> 24) & 0xF);
+            Data.X = (byte)((RecordData >> 28) & 0xF);
+
+            return Data;
+        }
+
+        public static void WriteRecord(Wrapped wSock, Record Data) {
+            int RecordData = Data.Metadata & 0xF | (Data.BlockID & 0xFFF) << 4 | (Data.Y & 0xFF) << 16 | (Data.Z & 0xF) << 24 | (Data.X & 0xF) << 28;
+            wSock.writeInt(RecordData);
         }
     }
 }

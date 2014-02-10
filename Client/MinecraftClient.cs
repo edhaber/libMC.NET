@@ -8,11 +8,11 @@ using System.Drawing;
 using libMC.NET.Common;
 using libMC.NET.World;
 using libMC.NET.Entities;
+using libMC.NET.Network;
 
 // TODO: [Low] Comment more things
 // TODO: [Medium] Speed things up, optimize code.
 
-// [Current]: Refactor packets to be universal for Server/Client, and be usable with proxies.
 // [Current]: Refactor code to be modular and not dependant on any speicfic server or client code.
 namespace libMC.NET.Client {
     /// <summary>
@@ -50,7 +50,7 @@ namespace libMC.NET.Client {
         }
 
         /// <summary>
-        /// Login to MinecraftClient.net and store credentials
+        /// Login to Minecraft.net and store credentials
         /// </summary>
         public void Login() {
             if (VerifyNames) {
@@ -58,11 +58,11 @@ namespace libMC.NET.Client {
                 string[] credentials = loginHandler.Login(ClientName, ClientPassword);
 
                 if (credentials[0] == "") {  // -- Fall back to no auth.
-                    RaiseError(this, "Failed to login to MinecraftClient.net! (Incorrect username or password)");
+                    RaiseError(this, "Failed to login to Minecraft.net! (Incorrect username or password)");
 
                     VerifyNames = false;
                 } else {
-                    RaiseInfo(this, "Logged in to MinecraftClient.net successfully.");
+                    RaiseInfo(this, "Logged in to Minecraft.net successfully.");
 
                     RaiseDebug(this, string.Format("Token: {0}\nProfile: {1}", credentials[0], credentials[1]));
 
@@ -78,7 +78,7 @@ namespace libMC.NET.Client {
         
         }
         /// <summary>
-        /// Uses a client's stored credentials to verify with MinecraftClient.net
+        /// Uses a client's stored credentials to verify with Minecraft.net
         /// </summary>
         public bool VerifySession() {
             if (AccessToken == null || ClientToken == null) {
@@ -101,8 +101,9 @@ namespace libMC.NET.Client {
 
             return true;
         }
+
         /// <summary>
-        /// Uses a client's stored credentials to verify with MinecraftClient.net
+        /// Uses a client's stored credentials to verify with Minecraft.net
         /// </summary>
         /// <param name="accessToken">Stored Access Token</param>
         /// <param name="clientToken">Stored Client Token</param>
@@ -125,6 +126,7 @@ namespace libMC.NET.Client {
 
             return true;
         }
+
         /// <summary>
         /// Connects to the MinecraftClient Server.
         /// </summary>
@@ -150,7 +152,7 @@ namespace libMC.NET.Client {
         }
 
         /// <summary>
-        /// Disconnects from the MinecraftClient server.
+        /// Disconnects from the Minecraft server.
         /// </summary>
         public void Disconnect() {
             if (nh != null)
@@ -171,7 +173,9 @@ namespace libMC.NET.Client {
         #region Simple Actions
         public void SendChat(string Message) {
             if (nh != null) {
-                Packets.Play.ServerBound.ChatMessage.SendChat(this, Message);
+                var ChatPacket = new SBChatMessage();
+                ChatPacket.Message = Message;
+                ChatPacket.Write(nh.wSock);
             }
         }
         #endregion
