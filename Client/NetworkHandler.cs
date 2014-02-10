@@ -116,7 +116,7 @@ namespace libMC.NET.Client {
         /// 
         void PopulateLists() {
             packetsLogin = new Dictionary<int,Func<IPacket>> {
-                {0, () => new CBDisconnect() },
+                {0, () => new CBLoginDisconnect() },
                 {1, () => new CBEncryptionRequest() },
                 {2, () => new CBLoginSuccess() }
             };

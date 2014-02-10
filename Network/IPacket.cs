@@ -73,7 +73,7 @@ namespace libMC.NET.Network {
         }
     }
 
-    public struct CBDisconnect : IPacket {
+    public struct CBLoginDisconnect : IPacket {
         public string JSONData { get; set; }
 
         public void Read(Wrapped wSock) {

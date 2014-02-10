@@ -24,58 +24,9 @@ namespace libMC.NET.Entities {
 
         public Dictionary<int, Item> Inventory;
 
-        public Entity(ref Minecraft mc, string type) {
+        public Entity(string type) {
             Type = type;
             Inventory = new Dictionary<int, Item>();
-        }
-
-        public void ReadEntityMetadata(ref Wrapped wSock) {
-
-            do {
-
-                byte item = wSock.readByte();
-
-                if (item == 127) break;
-
-                int index = item & 0x1F;
-                int type = item >> 5;
-
-                switch (type) {
-                    case 0:
-                        HandleMetadata(index, wSock.readByte());
-                        break;
-                    case 1:
-                        HandleMetadata(index, wSock.readShort());
-                        break;
-                    case 2:
-                        HandleMetadata(index, wSock.readInt());
-                        break;
-                    case 3:
-                        HandleMetadata(index, wSock.readFloat());
-                        break;
-                    case 4:
-                        HandleMetadata(index, wSock.readString());
-                        break;
-                    case 5:
-                        Item temp = new Item();
-                        temp.ReadSlot(ref wSock);
-
-                        HandleMetadata(index, temp);
-                        break;
-                    case 6:
-                        Vector v = new Vector();
-
-                        v.x = wSock.readInt();
-                        v.y = wSock.readInt();
-                        v.z = wSock.readInt();
-
-                        HandleMetadata(index, v);
-                        break;
-
-                }
-            } while (true);
-           
-
         }
         
         /// <summary>
