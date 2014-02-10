@@ -6,8 +6,7 @@ using System.Threading.Tasks;
 using CWrapped;
 using System.Net.Sockets;
 using System.Threading;
-using libMC.NET.Packets.Handshake;
-using libMC.NET.Packets.Login;
+using libMC.NET.Network;
 using libMC.NET.MinecraftWorld;
 
 namespace libMC.NET.Client {
@@ -21,9 +20,9 @@ namespace libMC.NET.Client {
         public TickHandler worldTick;
 
         #region Packet Dictionaries
-        Dictionary<int, Func<MinecraftClient, Packets.Packet>> packetsLogin;
-        Dictionary<int, Func<MinecraftClient, Packets.Packet>> packetsPlay;
-        Dictionary<int, Func<MinecraftClient, Packets.Packet>> packetsStatus;
+        Dictionary<int, Func<IPacket>> packetsLogin;
+        Dictionary<int, Func<IPacket>> packetsPlay;
+        Dictionary<int, Func<IPacket>> packetsStatus;
         #endregion
         #endregion
 
@@ -70,14 +69,24 @@ namespace libMC.NET.Client {
             RaiseSocketDebug(this, "Socket Created");
 
             // -- Send a handshake packet
+            
+            var hs = new SBHandshake();
+            hs.ProtocolVersion = 4;
+            hs.ServerAddress = mainMC.ServerIP;
+            hs.ServerPort = (short)mainMC.ServerPort;
+            hs.NextState = 2;
 
-            if (mainMC.ServerState != 1) {
-                var hs = new Handshake(ref mainMC);
-                RaiseSocketDebug(this, "Handshake sent.");
-            } else {
-                var hs = new Handshake(ref mainMC);
-                RaiseSocketDebug(this, "Handshake sent, Pinging server!");
+            if (mainMC.ServerState == 1)
+                hs.NextState = 1;
+
+            hs.Write(wSock);
+
+            if (mainMC.ServerState == 1) {
+                var PingRequest = new SBRequest();
+                PingRequest.Write(wSock);
             }
+
+            RaiseSocketDebug(this, "Handshake sent.");
 
             // -- Start network parsing.
             handler = new Thread(PacketHandler);
@@ -96,7 +105,7 @@ namespace libMC.NET.Client {
             baseStream = null;
 
             baseSock.Close();
-            InfoMessage(this, "Disconnected from MinecraftClient Server.");
+            InfoMessage(this, "Disconnected from Minecraft Server.");
 
 
         }
@@ -106,84 +115,84 @@ namespace libMC.NET.Client {
         /// </summary>
         /// 
         void PopulateLists() {
-            packetsLogin = new Dictionary<int,Func<MinecraftClient,Packets.Packet>> {
-                {0, (mainMC) => new Disconnect(ref mainMC) },
-                {1, (mainMC) => new EncryptionRequest(ref mainMC) },
-                {2, (mainMC) => new LoginSuccess(ref mainMC) }
+            packetsLogin = new Dictionary<int,Func<IPacket>> {
+                {0, () => new CBDisconnect() },
+                {1, () => new CBEncryptionRequest() },
+                {2, () => new CBLoginSuccess() }
             };
 
-            packetsStatus = new Dictionary<int, Func<MinecraftClient, Packets.Packet>> {
-                {0, (mainMC) => new Packets.Status.Response(ref mainMC) },
-                {1, (mainMC) => new Packets.Status.ServerPing(ref mainMC) }
+            packetsStatus = new Dictionary<int, Func<IPacket>> {
+                {0, () => new CBResponse() },
+                {1, () => new CBPing() }
             };
 
             //-------------------
-            packetsPlay = new Dictionary<int, Func<MinecraftClient, Packets.Packet>> {
-                {0, (mainMC) => new Packets.Play.KeepAlive(ref mainMC) },
-                {1, (mainMC) => new Packets.Play.JoinGame(ref mainMC) },
-                {2, (mainMC) => new Packets.Play.ChatMessage(ref mainMC) },
-                {3, (mainMC) => new Packets.Play.TimeUpdate(ref mainMC) },
-                {4, (mainMC) => new Packets.Play.EntityEquipment(ref mainMC) },
-                {5, (mainMC) => new Packets.Play.SpawnPosition(ref mainMC) },
-                {6, (mainMC) => new Packets.Play.UpdateHealth(ref mainMC) },
-                {7, (mainMC) => new Packets.Play.Respawn(ref mainMC) },
-                {8, (mainMC) => new Packets.Play.PlayerPositionandLook(ref mainMC) },
-                {9, (mainMC) => new Packets.Play.HeldItemChange(ref mainMC) },
-                {10, (mainMC) => new Packets.Play.UseBed(ref mainMC) },
-                {11, (mainMC) => new Packets.Play.Animation(ref mainMC) },
-                {12, (mainMC) => new Packets.Play.SpawnPlayer(ref mainMC) },
-                {13, (mainMC) => new Packets.Play.CollectItem(ref mainMC) },
-                {14, (mainMC) => new Packets.Play.SpawnObject(ref mainMC) },
-                {15, (mainMC) => new Packets.Play.SpawnMob(ref mainMC) },
-                {16, (mainMC) => new Packets.Play.SpawnPainting(ref mainMC) },
-                {17, (mainMC) => new Packets.Play.SpawnExpOrb(ref mainMC) },
-                {18, (mainMC) => new Packets.Play.EntityVelocity(ref mainMC) },
-                {19, (mainMC) => new Packets.Play.DestroyEntities(ref mainMC) },
-                {20, (mainMC) => new Packets.Play.Entity(ref mainMC) },
-                {21, (mainMC) => new Packets.Play.EntityRelativeMove(ref mainMC) },
-                {22, (mainMC) => new Packets.Play.EntityLook(ref mainMC) },
-                {23, (mainMC) => new Packets.Play.EntityLookRelativeMove(ref mainMC) },
-                {24, (mainMC) => new Packets.Play.EntityTeleport(ref mainMC) },
-                {25, (mainMC) => new Packets.Play.EntityHeadLook(ref mainMC) },
-                {26, (mainMC) => new Packets.Play.EntityStatus(ref mainMC) },
-                {27, (mainMC) => new Packets.Play.attachEntity(ref mainMC) },
-                {28, (mainMC) => new Packets.Play.EntityMetadata(ref mainMC) },
-                {29, (mainMC) => new Packets.Play.EntityEffect(ref mainMC) },
-                {30, (mainMC) => new Packets.Play.RemoveEntityEffect(ref mainMC) },
-                {31, (mainMC) => new Packets.Play.SetExperience(ref mainMC) },
-                {32, (mainMC) => new Packets.Play.EntityProperties(ref mainMC) },
-                {33, (mainMC) => new Packets.Play.ChunkData(ref mainMC) },
-                {34, (mainMC) => new Packets.Play.MultiBlockChange(ref mainMC) },
-                {35, (mainMC) => new Packets.Play.BlockChange(ref mainMC) },
-                {36, (mainMC) => new Packets.Play.BlockAction(ref mainMC) },
-                {37, (mainMC) => new Packets.Play.BlockBreakAnimation(ref mainMC) },
-                {38, (mainMC) => new Packets.Play.MapChunkBulk(ref mainMC) },
-                {39, (mainMC) => new Packets.Play.Explosion(ref mainMC) },
-                {40, (mainMC) => new Packets.Play.Effects(ref mainMC) },
-                {41, (mainMC) => new Packets.Play.SoundEffect(ref mainMC) },
-                {42, (mainMC) => new Packets.Play.Particle(ref mainMC) },
-                {43, (mainMC) => new Packets.Play.ChangeGameState(ref mainMC) },
-                {44, (mainMC) => new Packets.Play.SpawnGlobalEntity(ref mainMC) },
-                {45, (mainMC) => new Packets.Play.OpenWindow(ref mainMC) },
-                {46, (mainMC) => new Packets.Play.CloseWindow(ref mainMC) },
-                {47, (mainMC) => new Packets.Play.SetSlot(ref mainMC) },
-                {48, (mainMC) => new Packets.Play.WindowItems(ref mainMC) },
-                {49, (mainMC) => new Packets.Play.WindowProperty(ref mainMC) },
-                {50, (mainMC) => new Packets.Play.ConfirmTransaction(ref mainMC) },
-                {51, (mainMC) => new Packets.Play.UpdateSign(ref mainMC) },
-                {52, (mainMC) => new Packets.Play.Maps(ref mainMC) }, // Still no clue what this is for.
-                {53, (mainMC) => new Packets.Play.UpdateBlockEntity(ref mainMC) },
-                {54, (mainMC) => new Packets.Play.SignEditorOpen(ref mainMC) },
-                {55, (mainMC) => new Packets.Play.Statistics(ref mainMC) },
-                {56, (mainMC) => new Packets.Play.PlayerListItem(ref mainMC) },
-                {57, (mainMC) => new Packets.Play.PlayerAbilities(ref mainMC) },
-                {58, (mainMC) => new Packets.Play.TabComplete(ref mainMC) },
-                {59, (mainMC) => new Packets.Play.ScoreboardObjective(ref mainMC) },
-                {60, (mainMC) => new Packets.Play.UpdateScore(ref mainMC) },
-                {61, (mainMC) => new Packets.Play.DisplayScoreboard(ref mainMC) },
-                {62, (mainMC) => new Packets.Play.Teams(ref mainMC) },
-                {63, (mainMC) => new Packets.Play.PluginMessage(ref mainMC) },
-                {64, (mainMC) => new Packets.Play.Disconnect(ref mainMC) }
+            packetsPlay = new Dictionary<int, Func<IPacket>> {
+                {0, () => new CBKeepAlive() },
+                {1, () => new CBJoinGame() },
+                {2, () => new CBChatMessage() },
+                {3, () => new CBTimeUpdate() },
+                {4, () => new CBEntityEquipment() },
+                {5, () => new CBSpawnPosition() },
+                {6, () => new CBUpdateHealth() },
+                {7, () => new CBRespawn() },
+                {8, () => new CBPlayerPositionAndLook() },
+                {9, () => new CBHeldItemChange() },
+                {10, () => new CBUseBed() },
+                {11, () => new CBAnimation() },
+                {12, () => new CBSpawnPlayer() },
+                {13, () => new CBCollectItem() },
+                {14, () => new CBSpawnObject() },
+                {15, () => new CBSpawnMob() },
+                {16, () => new CBSpawnPainting() },
+                {17, () => new CBSpawnExperienceOrb() },
+                {18, () => new CBEntityVelocity() },
+                {19, () => new CBDestroyEntities() },
+                {20, () => new CBEntity() },
+                {21, () => new CBEntityRelativeMove() },
+                {22, () => new CBEntityLook() },
+                {23, () => new CBEntityLookandRelativeMove() },
+                {24, () => new CBEntityTeleport() },
+                {25, () => new CBEntityHeadLook() },
+                {26, () => new CBEntityStatus() },
+                {27, () => new CBAttachEntity() },
+                {28, () => new CBEntityMetadata() },
+                {29, () => new CBEntityEffect() },
+                {30, () => new CBRemoveEntityEffect() },
+                {31, () => new CBSetExperience() },
+                {32, () => new CBEntityProperties() },
+                {33, () => new CBChunkData() },
+                {34, () => new CBMultiBlockChange() },
+                {35, () => new CBBlockChange() },
+                {36, () => new CBBlockAction() },
+                {37, () => new CBBlockBreakAnimation() },
+                {38, () => new CBMapChunkBulk() },
+                {39, () => new CBExplosion() },
+                {40, () => new CBEffect() },
+                {41, () => new CBSoundEffect() },
+                {42, () => new CBParticle() },
+                {43, () => new CBChangeGameState() },
+                {44, () => new CBSpawnGlobalEntity() },
+                {45, () => new CBOpenWindow() },
+                {46, () => new CBCloseWindow() },
+                {47, () => new CBSetSlot() },
+                {48, () => new CBWindowItems() },
+                {49, () => new CBWindowProperty() },
+                {50, () => new CBConfirmTransaction() },
+                {51, () => new CBUpdateSign() },
+                {52, () => new CBMaps() }, // Still no clue what this is for.
+                {53, () => new CBUpdateBlockEntity() },
+                {54, () => new CBSignEditorOpen() },
+                {55, () => new CBStatistics() },
+                {56, () => new CBPlayerListItem() },
+                {57, () => new CBPlayerAbilities() },
+                {58, () => new CBTabComplete() },
+                {59, () => new CBScoreboardObjective() },
+                {60, () => new CBUpdateScore() },
+                {61, () => new CBDisplayScoreboard() },
+                {62, () => new CBTeams() },
+                {63, () => new CBPluginMessage() },
+                {64, () => new CBDisconnect() }
             };
 
             RaiseSocketDebug(this, "List populated");
@@ -207,7 +216,8 @@ namespace libMC.NET.Client {
                                     continue;
                                 }
 
-                                var packet = packetsStatus[packetID](mainMC);
+                                var packet = packetsStatus[packetID].Invoke();
+                                packet.Read(wSock);
                                 RaisePacketHandled(this, packet, packetID);
 
                                 break;
@@ -219,7 +229,8 @@ namespace libMC.NET.Client {
                                     continue;
                                 }
 
-                                var packetl = packetsLogin[packetID](mainMC);
+                                var packetl = packetsLogin[packetID].Invoke();
+                                packetl.Read(wSock);
                                 RaisePacketHandled(this, packetl, packetID);
 
                                 break;
@@ -231,7 +242,8 @@ namespace libMC.NET.Client {
                                     continue;
                                 }
 
-                                var packetp = packetsPlay[packetID](mainMC);
+                                var packetp = packetsPlay[packetID].Invoke();
+                                packetp.Read(wSock);
                                 RaisePacketHandled(this, packetp, packetID);
 
                                 break;

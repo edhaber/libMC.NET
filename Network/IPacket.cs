@@ -12,19 +12,25 @@ namespace libMC.NET.Network {
     }
 
     // -- Status 0: Handshake
-    public struct SBServerbound : IPacket {
+    public struct SBHandshake : IPacket {
         public int ProtocolVersion { get; set; }
         public string ServerAddress { get; set; }
+        public short ServerPort { get; set; }
+        public int NextState { get; set; }
 
         public void Read(Wrapped wSock) {
             ProtocolVersion = wSock.readVarInt();
             ServerAddress = wSock.readString();
+            ServerPort = wSock.readShort();
+            NextState = wSock.readVarInt();
         }
 
         public void Write(Wrapped wSock) {
             wSock.writeVarInt(0x00);
             wSock.writeVarInt(ProtocolVersion);
             wSock.writeString(ServerAddress);
+            wSock.writeShort(ServerPort);
+            wSock.writeVarInt(NextState);
             wSock.Purge();
         }
     }
@@ -1645,6 +1651,35 @@ namespace libMC.NET.Network {
         }
     }
 
+    public struct CBSoundEffect : IPacket {
+        public string SoundName { get; set; }
+        public int EffectpositionX { get; set; }
+        public int EffectpositionY { get; set; }
+        public int EffectpositionZ { get; set; }
+        public float Volume { get; set; }
+        public byte Pitch { get; set; }
+
+        public void Read(Wrapped wSock) {
+            SoundName = wSock.readString();
+            EffectpositionX = wSock.readInt();
+            EffectpositionY = wSock.readInt();
+            EffectpositionZ = wSock.readInt();
+            Volume = wSock.readFloat();
+            Pitch = wSock.readByte();
+        }
+
+        public void Write(Wrapped wSock) {
+            wSock.writeVarInt(0x29);
+            wSock.writeString(SoundName);
+            wSock.writeInt(EffectpositionX);
+            wSock.writeInt(EffectpositionY);
+            wSock.writeInt(EffectpositionZ);
+            wSock.writeFloat(Volume);
+            wSock.writeByte(Pitch);
+            wSock.Purge();
+        }
+    }
+
     public struct CBParticle : IPacket {
         public string Particlename { get; set; }
         public float X { get; set; }
@@ -1968,6 +2003,26 @@ namespace libMC.NET.Network {
             wSock.writeVarInt(Count);
             wSock.writeString(Statisticsname);
             wSock.writeVarInt(Value);
+            wSock.writeString(Playername);
+            wSock.writeBool(Online);
+            wSock.writeShort(Ping);
+            wSock.Purge();
+        }
+    }
+
+    public struct CBPlayerListItem : IPacket {
+        public string Playername { get; set; }
+        public bool Online { get; set; }
+        public short Ping { get; set; }
+
+        public void Read(Wrapped wSock) {
+            Playername = wSock.readString();
+            Online = wSock.readBool();
+            Ping = wSock.readShort();
+        }
+
+        public void Write(Wrapped wSock) {
+            wSock.writeVarInt(0x38);
             wSock.writeString(Playername);
             wSock.writeBool(Online);
             wSock.writeShort(Ping);
