@@ -78,7 +78,7 @@ namespace libMC.NET.Client {
             DoHandshake();
 
             // -- Start network parsing.
-            handler = new Thread(NetworkHandler);
+            handler = new Thread(NetworkPacketHandler);
             handler.Start();
             RaiseSocketDebug(this, "Handler thread started");
         }
@@ -117,6 +117,10 @@ namespace libMC.NET.Client {
             if (MainMC.ServerState == 1) {
                 var PingRequest = new SBRequest();
                 PingRequest.Write(wSock);
+            } else {
+                var LoginStart = new SBLoginStart();
+                LoginStart.Name = MainMC.ClientName;
+                LoginStart.Write(wSock);
             }
 
             RaiseSocketDebug(this, "Handshake sent.");
@@ -239,7 +243,7 @@ namespace libMC.NET.Client {
         /// <summary>
         /// Creates an instance of each new packet, so it can be parsed.
         /// </summary>
-        void NetworkHandler() {
+        void NetworkPacketHandler() {
             try {
                 int length = 0;
 
@@ -255,8 +259,12 @@ namespace libMC.NET.Client {
                                     continue;
                                 }
 
-                                var packet = packetsStatus[packetID].Invoke();
+                                var packet = packetsStatus[packetID]();
                                 packet.Read(wSock);
+
+                                if (StatusHandlers[packetID] != null)
+                                    StatusHandlers[packetID](MainMC, packet);
+
                                 RaisePacketHandled(this, packet, packetID);
 
                                 break;
@@ -268,8 +276,12 @@ namespace libMC.NET.Client {
                                     continue;
                                 }
 
-                                var packetl = packetsLogin[packetID].Invoke();
+                                var packetl = packetsLogin[packetID]();
                                 packetl.Read(wSock);
+
+                                if (LoginHandlers[packetID] != null)
+                                    LoginHandlers[packetID](MainMC, packetl);
+
                                 RaisePacketHandled(this, packetl, packetID);
 
                                 break;
@@ -281,8 +293,12 @@ namespace libMC.NET.Client {
                                     continue;
                                 }
 
-                                var packetp = packetsPlay[packetID].Invoke();
+                                var packetp = packetsPlay[packetID]();
                                 packetp.Read(wSock);
+
+                                if (PlayHandlers[packetID] != null)
+                                    PlayHandlers[packetID](MainMC, packetp);
+
                                 RaisePacketHandled(this, packetp, packetID);
 
                                 break;

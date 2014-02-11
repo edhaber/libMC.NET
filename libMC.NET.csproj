@@ -51,6 +51,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Client\Handlers\EncryptionRequest.cs" />
+    <Compile Include="Client\Handlers\LoginDisconnect.cs" />
+    <Compile Include="Client\Handlers\LoginSuccess.cs" />
     <Compile Include="Client\PacketEventHandler.cs" />
     <Compile Include="Common\DoubleVector.cs" />
     <Compile Include="Entities\Block.cs" />

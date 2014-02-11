@@ -809,7 +809,7 @@ namespace libMC.NET.Network {
         public string LevelType { get; set; }
 
         public void Read(Wrapped wSock) {
-            Dimension = wSock.readInt();
+            Dimension = wSock.readInt(); // -- Only possible values for this are -1, 0, and 1.. No reason for it to be an int and waste 4 bytes. Thanks mojang.
             Difficulty = wSock.readByte();
             Gamemode = wSock.readByte();
             LevelType = wSock.readString();
