@@ -296,6 +296,7 @@ namespace libMC.NET.Client {
                                 var packetp = packetsPlay[packetID]();
                                 packetp.Read(wSock);
 
+                                
                                 if (PlayHandlers[packetID] != null)
                                     PlayHandlers[packetID](MainMC, packetp);
 
