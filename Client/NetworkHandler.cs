@@ -16,6 +16,7 @@ namespace libMC.NET.Client {
         MinecraftClient MainMC;
         TcpClient baseSock;
         NetworkStream baseStream;
+        PacketEventHandler PacketHandlers;
         public Wrapped wSock;
         public TickHandler worldTick;
 
@@ -77,6 +78,8 @@ namespace libMC.NET.Client {
 
             DoHandshake();
 
+            PacketHandlers = new PacketEventHandler(this);
+
             // -- Start network parsing.
             handler = new Thread(NetworkPacketHandler);
             handler.Start();
@@ -95,7 +98,6 @@ namespace libMC.NET.Client {
 
             baseSock.Close();
             InfoMessage(this, "Disconnected from Minecraft Server.");
-
 
         }
 
@@ -251,6 +253,8 @@ namespace libMC.NET.Client {
                     if (baseSock.Connected) {
                         var packetID = wSock.readVarInt();
 
+                        RaiseSocketDebug(this, packetID.ToString());
+
                         switch (MainMC.ServerState) {
                             case (int)ServerState.Status:
                                 if (packetsStatus.Keys.Contains(packetID) == false) {
@@ -303,11 +307,15 @@ namespace libMC.NET.Client {
                                 RaisePacketHandled(this, packetp, packetID);
 
                                 break;
+                            default:
+                                RaiseSocketDebug(this, "Uhhhh what????");
+                                break;
                         }
                         if (worldTick != null)
                             worldTick.DoTick();
                     }
                 }
+                RaiseSocketDebug(this, "whhaaat??");
             } catch (Exception e) {
                 if (e.GetType() != typeof(ThreadAbortException)) {
                     RaiseSocketError(this, "Critical error in handling packets.");
@@ -316,6 +324,7 @@ namespace libMC.NET.Client {
                     Stop();
                 }
             }
+            RaiseSocketDebug(this, "Im ending!");
         }
 
         enum ServerState {

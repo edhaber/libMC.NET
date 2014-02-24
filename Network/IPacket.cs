@@ -1823,8 +1823,9 @@ namespace libMC.NET.Network {
         public void Read(Wrapped wSock) {
             WindowID = wSock.readByte();
             Count = wSock.readShort();
+            Slotdata = new SlotData[Count];
 
-            for (int x = 0; x < Count - 1; x++)
+            for (int x = 0; x < Count; x++)
                 Slotdata[x] = WrappedExtension.ReadSlot(wSock);
         }
 
@@ -1833,7 +1834,7 @@ namespace libMC.NET.Network {
             wSock.writeByte(WindowID);
             wSock.writeShort(Count);
 
-            for (int x = 0; x < Count - 1; x++)
+            for (int x = 0; x < Count; x++)
                 WrappedExtension.WriteSlot(wSock, Slotdata[x]);
 
             wSock.Purge();
@@ -1983,6 +1984,7 @@ namespace libMC.NET.Network {
 
     public struct CBStatistics : IPacket {
         public int Count { get; set; }
+        public Dictionary<string, int> Entries { get; set; }
         public string Statisticsname { get; set; }
         public int Value { get; set; }
         public string Playername { get; set; }
@@ -1990,22 +1992,26 @@ namespace libMC.NET.Network {
         public short Ping { get; set; }
 
         public void Read(Wrapped wSock) {
+            Entries = new Dictionary<string, int>();
             Count = wSock.readVarInt();
-            Statisticsname = wSock.readString();
-            Value = wSock.readVarInt();
-            Playername = wSock.readString();
-            Online = wSock.readBool();
-            Ping = wSock.readShort();
+
+            for (int i = 0; i < Count; i++) {
+                string name = wSock.readString();
+                int value = wSock.readVarInt();
+
+                Entries.Add(name, value);
+            }
         }
 
         public void Write(Wrapped wSock) {
             wSock.writeVarInt(0x37);
             wSock.writeVarInt(Count);
-            wSock.writeString(Statisticsname);
-            wSock.writeVarInt(Value);
-            wSock.writeString(Playername);
-            wSock.writeBool(Online);
-            wSock.writeShort(Ping);
+
+            foreach (string s in Entries.Keys) {
+                wSock.writeString(s);
+                wSock.writeVarInt(Entries[s]);
+            }
+
             wSock.Purge();
         }
     }
@@ -2032,14 +2038,20 @@ namespace libMC.NET.Network {
 
     public struct CBPlayerAbilities : IPacket {
         public sbyte Flags { get; set; }
+        public float Flyingspeed { get; set; }
+        public float Walkingspeed { get; set; }
 
         public void Read(Wrapped wSock) {
             Flags = wSock.readSByte();
+            Flyingspeed = wSock.readFloat();
+            Walkingspeed = wSock.readFloat();
         }
 
         public void Write(Wrapped wSock) {
             wSock.writeVarInt(0x39);
             wSock.writeSByte(Flags);
+            wSock.writeFloat(Flyingspeed);
+            wSock.writeFloat(Walkingspeed);
             wSock.Purge();
         }
     }

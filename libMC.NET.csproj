@@ -34,7 +34,8 @@
     <Reference Include="Cryptography">
       <HintPath>..\..\Visual Studio 2012\Projects\Cryptography\Cryptography\bin\Debug\Cryptography.dll</HintPath>
     </Reference>
-    <Reference Include="CWrapped">
+    <Reference Include="CWrapped, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\CWrapped\bin\Release\CWrapped.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
